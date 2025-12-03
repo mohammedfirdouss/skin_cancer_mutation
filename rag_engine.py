@@ -97,7 +97,7 @@ def load_models():
         max_new_tokens=512,
         model_kwargs={"quantization_config": quantization_config},
         generate_kwargs={"temperature": 0.7, "do_sample": True},
-        device_map="auto",
+        device_map="cpu",
     )
     
     return embed_model, llm
