@@ -50,9 +50,13 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "query_engine" not in st.session_state:
+    @st.cache_resource
+    def _initialize_rag_pipeline(max_samples_val):
+        return initialize_rag_pipeline(max_samples=max_samples_val)
+
     with st.spinner("Initializing AI System (Loading Models & Index)... This may take a minute."):
         try:
-            st.session_state.query_engine = initialize_rag_pipeline(max_samples=max_samples)
+            st.session_state.query_engine = _initialize_rag_pipeline(max_samples)
             st.success("System Initialized Successfully!")
         except Exception as e:
             st.error(f"Error initializing system: {e}")
