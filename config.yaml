@@ -1,0 +1,43 @@
+models:
+  embedding: "sentence-transformers/all-MiniLM-L6-v2"
+  llm: "unsloth/Llama-3.2-1B-Instruct"
+
+data:
+  max_samples: 1000 # Number of samples to filter from the dataset.
+  cache_dir: "./cache_data" # Directory to store filtered data and other caches.
+  keywords:
+    - 'cancer'
+    - 'tumor'
+    - 'mutation'
+    - 'melanoma'
+    - 'braf'
+    - 'tp53'
+    - 'v600e'
+    - 'carcinoma'
+    - 'oncogene'
+
+vector_store:
+  db_directory: "./db_chroma"
+  collection_name: "skin_cancer_mutations"
+
+node_parser:
+  chunk_size: 512
+
+retriever:
+  similarity_top_k: 3
+
+llm_generation:
+  context_window: 2048
+  max_new_tokens: 512
+  temperature: 0.7
+  do_sample: true
+
+prompt_template: >
+  Context information is below.
+  ---------------------
+  {context_str}
+  ---------------------
+  You are a scientific AI assistant specializing in cancer biology.
+  Given the context, answer the query in a precise, factual, and concise manner.
+  Query: {query_str}
+  Answer:

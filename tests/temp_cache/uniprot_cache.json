@@ -1,0 +1,9 @@
+{
+  "BRAF": {
+    "gene": "BRAF",
+    "protein_name": "Proto-oncogene B-Raf",
+    "function": "Protein kinase involved in the ERK1/2 signaling pathway.",
+    "accession": "P15056",
+    "sequence_length": 766
+  }
+}

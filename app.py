@@ -1,8 +1,15 @@
-import streamlit as st
-import time
-from rag_engine import initialize_rag_pipeline
+"""
+Streamlit Web Application for the Skin Cancer Mutation AI Assistant.
 
-# Page Configuration
+This application provides a user-friendly chat interface to interact with the RAG
+pipeline defined in `rag_engine.py`. It allows users to ask questions about
+skin cancer mutations and receive answers grounded in scientific data.
+"""
+
+import streamlit as st
+from rag_engine import create_rag_engine
+
+# --- Page Configuration ---
 st.set_page_config(
     page_title="Skin Cancer AI Assistant",
     page_icon="🧬",
@@ -10,93 +17,123 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for a medical/clean look
+# --- Custom CSS for a clean, professional look ---
 st.markdown("""
 <style>
-    .stChatMessage {
-        background-color: #f0f2f6;
-        border-radius: 10px;
-        padding: 10px;
+    /* Main app background */
+    .stApp {
+        background-color: #f4f6f8;
     }
-    .stMarkdown {
-        font-family: 'Helvetica Neue', sans-serif;
+    /* Chat message styling */
+    .stChatMessage {
+        background-color: #ffffff;
+        border: 1px solid #e1e4e8;
+        border-radius: 10px;
+        padding: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    /* Sidebar styling */
+    .st-emotion-cache-18ni7ap {
+        background-color: #ffffff;
+    }
+    /* Button styling */
+    .stButton>button {
+        border-radius: 8px;
+        border: 1px solid #007bff;
+        color: #007bff;
+    }
+    .stButton>button:hover {
+        border-color: #0056b3;
+        color: #0056b3;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Sidebar
+
+# --- Initialization and Caching ---
+# Use st.cache_resource to initialize the RAG engine once and cache it across sessions.
+# This is the most important step for performance, ensuring models are not reloaded.
+@st.cache_resource
+def get_rag_engine():
+    """Initializes and returns the RAG query engine."""
+    with st.spinner("Initializing AI System... This may take a moment on first launch."):
+        try:
+            engine = create_rag_engine()
+            return engine
+        except Exception as e:
+            st.error(f"Fatal Error: Could not initialize the RAG engine. Details: {e}")
+            st.stop()
+
+query_engine = get_rag_engine()
+
+
+# --- Sidebar ---
 with st.sidebar:
-    st.image("https://img.icons8.com/color/96/000000/dna-helix.png", width=80)
-    st.title("Configuration")
+    st.image("https://img.icons8.com/color/96/000000/dna-helix.png", width=70)
+    st.title("AI Assistant")
     st.markdown("---")
-    st.info("**Model:** Llama-3.2-1B (Quantized)")
-    st.info("**Data Source:** Mol-Instructions (Filtered)")
-    
-    max_samples = st.slider("Max Documents to Load", min_value=100, max_value=2000, value=500, step=100)
-    
+    st.markdown("""
+    **About this App:**
+    This is a Retrieval-Augmented Generation (RAG) system designed to answer questions about skin cancer mutations.
+
+    **Technology Stack:**
+    - **LLM:** `Llama-3.2-1B (Quantized)`
+    - **Embeddings:** `all-MiniLM-L6-v2`
+    - **Vector Store:** `ChromaDB`
+    - **Framework:** `LlamaIndex`
+    """)
+    st.markdown("---")
     if st.button("Clear Chat History"):
         st.session_state.messages = []
+        st.success("Chat history cleared.")
         st.rerun()
 
-# Main Content
+# --- Main Application ---
 st.title("🧬 Skin Cancer Mutation AI Assistant")
-st.markdown("""
-This AI assistant helps clinicians and researchers explore **skin cancer mutations** (e.g., BRAF, NRAS).
-It uses a **RAG (Retrieval-Augmented Generation)** pipeline to ground answers in scientific data.
-""")
+st.markdown("Ask a question about a skin cancer mutation, its effects, or related therapies.")
 
-# Initialize Session State
+# Initialize chat history in session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "query_engine" not in st.session_state:
-    @st.cache_resource
-    def _initialize_rag_pipeline(max_samples_val):
-        return initialize_rag_pipeline(max_samples=max_samples_val)
-
-    with st.spinner("Initializing AI System (Loading Models & Index)... This may take a minute."):
-        try:
-            st.session_state.query_engine = _initialize_rag_pipeline(max_samples)
-            st.success("System Initialized Successfully!")
-        except Exception as e:
-            st.error(f"Error initializing system: {e}")
-            st.stop()
-
-# Display Chat History
+# Display past chat messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Chat Input
-if prompt := st.chat_input("Ask about a mutation (e.g., 'What is the effect of BRAF V600E?'):"):
-    # Add user message to history
+# Handle user input
+if prompt := st.chat_input("e.g., 'What is the clinical significance of BRAF V600E?'"):
+    # Add user message to history and display it
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Generate Response
+    # Generate and display assistant's response
     with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        full_response = ""
-        
-        with st.spinner("Analyzing scientific data..."):
+        with st.spinner("Searching scientific literature and databases..."):
             try:
-                response = st.session_state.query_engine.query(prompt)
-                full_response = str(response)
+                # Query the RAG engine
+                response_data = query_engine.query(prompt)
                 
-                # Simulate typing effect
-                message_placeholder.markdown(full_response)
+                # Extract the answer and display it
+                answer = response_data['response']
+                st.markdown(answer)
+
+                # Display source documents in an expander for traceability
+                with st.expander("📚 View Sources"):
+                    if response_data['source_nodes']:
+                        for node in response_data['source_nodes']:
+                            st.markdown(f"**Score:** {node.score:.3f}")
+                            st.caption(f"**Source:** `{node.metadata.get('source', 'N/A')}`")
+                            st.info(node.get_text()[:400] + "...")
+                            st.markdown("---")
+                    else:
+                        st.warning("No specific source documents were retrieved for this query.")
                 
-                # Show sources in an expander
-                with st.expander("📚 View Source Documents"):
-                    for node in response.source_nodes:
-                        st.markdown(f"**Score:** {node.score:.3f}")
-                        st.caption(node.text[:300] + "...")
-                        st.markdown("---")
-                        
+                # Add the full response (with sources) to session state
+                st.session_state.messages.append({"role": "assistant", "content": answer})
+
             except Exception as e:
-                full_response = f"An error occurred: {e}"
-                message_placeholder.error(full_response)
-    
-    # Add assistant message to history
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+                error_message = f"Sorry, an error occurred while processing your request. Please try again. Details: {e}"
+                st.error(error_message)
+                st.session_state.messages.append({"role": "assistant", "content": error_message})

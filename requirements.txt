@@ -1,14 +1,32 @@
-datasets
-transformers
-sentence-transformers
-faiss-cpu
-bitsandbytes
-accelerate
-gradio
-requests
+# --- Core Application ---
+streamlit
+
+# --- LlamaIndex Framework ---
 llama-index
 llama-index-llms-huggingface
 llama-index-embeddings-huggingface
+llama-index-vector-stores-chroma
+
+# --- Vector Database ---
 chromadb
+
+# --- Hugging Face ML Stack ---
+datasets
+transformers
+accelerate
+bitsandbytes
+sentence-transformers
+
+# --- PyTorch ---
+# torch is usually a dependency of transformers, but specifying it can help
+# ensure a compatible version is installed, especially for CUDA.
+# For CPU-only, you can use: torch --index-url https://download.pytorch.org/whl/cpu
+torch
+
+# --- API Requests ---
+requests
+
+# --- Other Dependencies ---
 protobuf
-streamlit
+# For parsing config.yaml
+pyyaml
